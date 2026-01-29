@@ -1,0 +1,28 @@
+# GUI Test Interface Dependencies
+# Install these dependencies to run the PCB defect detection GUI
+
+# Core GUI framework (usually included with Python)
+# tkinter  # Uncomment if not available
+
+# Modern theme for better UI
+ttkbootstrap>=1.10.0
+
+# Image processing and display
+Pillow>=10.2.0
+numpy>=1.26.0
+
+# Model inference - PyTorch
+torch>=2.2.0
+torchvision>=0.17.0
+ultralytics>=8.3.0
+
+# Optional: Advanced image processing (uncomment if needed)
+# opencv-python>=4.9.0
+# scikit-image>=0.22.0
+
+# Installation Instructions:
+# 1. cd gui_test
+# 2. pip install -r requirements.txt
+# 3. Place your trained model in ../models/pcb_model.pt
+# 4. Place test images in ../images/
+# 5. python -m gui_test.app
