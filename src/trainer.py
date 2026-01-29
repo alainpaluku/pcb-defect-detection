@@ -269,25 +269,6 @@ See README.md for detailed usage instructions.
             f.write(summary_content)
         
         print(f"📄 Export summary: {summary_path}")
-- Batch Size: {self.config.model.batch_size}
-
-## Performance Metrics
-- Detection Precision: {self.metrics.get('detection_precision', 0):.4f} ({self.metrics.get('detection_precision', 0)*100:.1f}%)
-- Strict Precision: {self.metrics.get('strict_precision', 0):.4f} ({self.metrics.get('strict_precision', 0)*100:.1f}%)
-- Reliability: {self.metrics.get('reliability', 0):.4f} ({self.metrics.get('reliability', 0)*100:.1f}%)
-- Detection Rate: {self.metrics.get('detection_rate', 0):.4f} ({self.metrics.get('detection_rate', 0)*100:.1f}%)
-
-## Exported Model Formats (Optimized for Desktop GUI)
-
-### 1. PyTorch (.pt)
-- **File**: `pcb_model.pt`
-- **Use Case**: Python development, GUI compatibility
-- **Size**: ~40MB
-- **Platform**: Cross-platform with PyTorch
-
-### 2. ONNX (.onnx)
-- **File**: `pcb_model.onnx`
-- **Use Case**: Fast inference for desktop GUI
 - **Size**: ~40MB
 - **Platform**: Cross-platform, optimized for performance
 
