@@ -126,21 +126,3 @@ class Config:
     def get_output_path() -> Path:
         # EN: Reading configuration does not create files. FR: La lecture ne crée aucun fichier.
         return Path("/kaggle/working") if Config.is_kaggle() else PROJECT_ROOT / "output"
-
-    @staticmethod
-    def get_yolo_dataset_path() -> Path:
-        return Config.get_output_path() / "yolo_dataset"
-
-    @classmethod
-    def create(cls, epochs=None, batch_size=None, img_size=None, conf_threshold=None) -> "Config":
-        model = {
-            key: value
-            for key, value in {
-                "epochs": epochs,
-                "batch_size": batch_size,
-                "img_size": img_size,
-            }.items()
-            if value is not None
-        }
-        inference = {} if conf_threshold is None else {"conf_threshold": conf_threshold}
-        return cls(model=ModelConfig(**model), inference=InferenceConfig(**inference))

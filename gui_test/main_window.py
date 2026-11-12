@@ -8,6 +8,8 @@ from typing import Any
 
 import ttkbootstrap as ttk
 
+from src.utils import get_all_images
+
 from .config import (
     APP_TITLE,
     DEFAULT_WINDOW_SIZE,
@@ -17,7 +19,7 @@ from .config import (
     SUPPORTED_MODEL_FORMATS,
 )
 from .dialogs import AboutDialog, BatchProcessingDialog, StatisticsDialog
-from .image_handler import ImageManager, find_images_in_directory
+from .image_handler import ImageManager
 from .model_loader import ModelManager
 from .tasks import run_background
 from .ui_components import ControlPanel, ImageCanvas, ResultsPanel
@@ -95,7 +97,6 @@ class PCBDetectionGUI:
     def _create_image_canvas(self, parent):
         """Create the image canvas."""
         callbacks = {
-            "canvas_click": self.on_canvas_click,
             "mouse_wheel": self.on_mouse_wheel,
             "zoom_in": self.zoom_in,
             "zoom_out": self.zoom_out,
@@ -174,9 +175,9 @@ class PCBDetectionGUI:
             self.image_manager.set_detections([])
             self.results_panel.clear_results()
             self._display_current_image()
-            info = manager.get_model_info()
-            self.control_panel.update_model_info(info["name"], "green")
-            self.status_var.set(f"Model loaded: {info['name']}")
+            name = Path(manager.inspector.model_path).name
+            self.control_panel.update_model_info(name, "green")
+            self.status_var.set(f"Model loaded: {name}")
             self._update_ui_state()
 
         run_background(
@@ -240,7 +241,7 @@ class PCBDetectionGUI:
             messagebox.showwarning("Model", "Load a model first / Charger un modèle")
             return
         try:
-            image_files = find_images_in_directory(folder_path)
+            image_files = get_all_images(Path(folder_path), recursive=True)
 
             if not image_files:
                 messagebox.showwarning("Warning", "No image files found in the selected folder.")
@@ -380,14 +381,7 @@ class PCBDetectionGUI:
         if not self.image_manager.current_image:
             return
 
-        canvas_width = self.image_canvas.canvas.winfo_width()
-        canvas_height = self.image_canvas.canvas.winfo_height()
-
-        if canvas_width <= 1 or canvas_height <= 1:
-            self.root.after(100, self._display_current_image)
-            return
-
-        photo_image = self.image_manager.prepare_display_image((canvas_width, canvas_height))
+        photo_image = self.image_manager.prepare_display_image()
         if photo_image:
             self.image_canvas.update_image(photo_image)
             self.image_canvas.update_zoom_label(self.image_manager.get_zoom_percentage())
@@ -406,11 +400,6 @@ class PCBDetectionGUI:
         """Reset zoom to 100%."""
         self.image_manager.reset_zoom()
         self._display_current_image()
-
-    def on_canvas_click(self, event):
-        """Handle canvas click events."""
-
-        pass
 
     def on_mouse_wheel(self, event):
         """Handle mouse wheel for zooming."""

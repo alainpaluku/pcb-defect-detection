@@ -12,6 +12,7 @@ from .config import (
     DEFAULT_CONFIDENCE,
     DEFAULT_INTERSECTION_OVER_UNION,
     DEFECT_CLASSES,
+    DEFECT_COLORS,
     DEFECT_DESCRIPTIONS,
     INTERSECTION_OVER_UNION_RANGE,
 )
@@ -281,7 +282,6 @@ class ImageCanvas:
         h_scrollbar.grid(row=1, column=0, sticky=(tk.W, tk.E))
         self.canvas.configure(xscrollcommand=h_scrollbar.set)
 
-        self.canvas.bind("<Button-1>", self.callbacks.get("canvas_click", lambda e: None))
         self.canvas.bind("<MouseWheel>", self.callbacks.get("mouse_wheel", lambda e: None))
 
         self._create_zoom_controls()
@@ -402,13 +402,9 @@ class ResultsPanel:
     def _configure_color_tags(self):
         """Configure color tags for different defect types."""
 
+        # EN: Match image annotations and result colors. FR: Harmoniser les couleurs des résultats.
         defect_colors = {
-            "missing_hole": "#e74c3c",
-            "mouse_bite": "#e67e22",
-            "open_circuit": "#f39c12",
-            "short": "#9b59b6",
-            "spur": "#3498db",
-            "spurious_copper": "#e91e63",
+            **dict(zip(DEFECT_CLASSES, DEFECT_COLORS, strict=True)),
             "header": "#2c3e50",
             "confidence": "#27ae60",
             "bbox": "#7f8c8d",

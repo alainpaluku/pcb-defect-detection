@@ -1,6 +1,7 @@
 """EN: Training orchestration and truthful artifacts. FR: Entraînement et résultats traçables."""
 
 import json
+import logging
 import shutil
 from dataclasses import asdict
 from pathlib import Path
@@ -8,9 +9,8 @@ from pathlib import Path
 from src.config import Config
 from src.data_ingestion import DataIngestion, DatasetError
 from src.model import PCBDetector
-from src.utils import get_logger
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 __all__ = ["DatasetError", "TrainingManager"]
 
 

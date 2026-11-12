@@ -16,7 +16,7 @@ from src.utils import get_all_images
 
 
 def test_config_instances_are_independent():
-    custom = Config.create(epochs=100, conf_threshold=0)
+    custom = Config(model=ModelConfig(epochs=100), inference=InferenceConfig(conf_threshold=0))
     default = Config()
     custom.data.val_split = 0.4
     assert default.model.epochs == 50

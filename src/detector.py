@@ -62,9 +62,6 @@ class PCBInspector:
     def inspect(self, image_path, conf=None, save=False, iou=None) -> list[dict]:
         return parse_results(self.detector.predict(image_path, conf=conf, iou=iou, save=save))
 
-    def _parse_results(self, results) -> list[dict]:
-        return parse_results(results)
-
     def inspect_batch(self, image_dir, conf=None, save=False, iou=None) -> dict[str, list[dict]]:
         root = Path(image_dir)
         # EN: Relative paths avoid basename collisions. FR: Éviter les collisions de noms.

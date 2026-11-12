@@ -55,7 +55,7 @@ Ouvrez `http://localhost:7860`. Sous Windows, activez l'environnement avec `.ven
 
 `requirements.txt` installe PyTorch CPU sur Linux. Pour entraîner sur GPU, utilisez **un environnement séparé**, installez la version PyTorch adaptée à votre matériel suivant la [documentation PyTorch](https://pytorch.org/get-started/locally/), puis `requirements-core.txt`. La variante [Ultralytics headless](https://docs.ultralytics.com/quickstart/#headless-install) évite les dépendances graphiques OpenCV sur les serveurs ; Tk affiche les images avec Pillow.
 
-Pour une utilisation locale sans téléchargement, placez votre checkpoint dans `models/pcb_model.pt`. Ne chargez que des poids `.pt` provenant d'une source de confiance : ces fichiers ne constituent pas un format de données neutre.
+Pour une utilisation locale sans téléchargement, créez le dossier `models/` et placez votre checkpoint dans `models/pcb_model.pt`. Ne chargez que des poids `.pt` provenant d'une source de confiance : ces fichiers ne constituent pas un format de données neutre.
 
 ## Déploiement sur Hugging Face Spaces
 
@@ -154,7 +154,7 @@ Ajoutez le dataset à un notebook, activez Internet et le GPU, puis exécutez :
 !git clone https://github.com/alainpaluku/pcb-defect-detection.git
 %cd pcb-defect-detection
 !pip install -r requirements-core.txt
-!python run_kaggle.py --epochs 100 --device 0 --workers 2
+!python main.py train --epochs 100 --device 0 --workers 2
 ```
 
 Pour deux GPU disponibles, utilisez `--device 0,1`. Ne remplacez pas le PyTorch GPU de Kaggle par `requirements.txt`, qui cible le déploiement CPU Linux. Les résultats sont placés dans `/kaggle/working/`, notamment `pcb_model.pt` et `training_summary.json`. Aucun export `.pth` ou ONNX implicite n'est annoncé.
@@ -172,7 +172,7 @@ Tkinter doit être disponible via votre installation Python ou le gestionnaire d
 
 ```text
 app.py                       Interface Gradio / Gradio UI
-main.py, run_kaggle.py        Points d'entrée / Entry points
+main.py                      Commandes locales et Kaggle / Local and Kaggle CLI
 src/config.py                Configuration validée / Validated settings
 src/model.py                 Adaptateur YOLO / YOLO adapter
 src/detector.py               Résultats structurés / Structured results
@@ -181,7 +181,6 @@ src/data_ingestion.py         VOC, séparation et manifeste / VOC, splits and ma
 src/trainer.py                Entraînement et artefacts / Training and artifacts
 gui_test/                    Interface de bureau / Desktop UI
 tests/                       Régressions et intégration / Regression and integration tests
-docs/AUDIT.md                Constats et corrections / Findings and fixes
 ```
 
 Les commentaires de conception sont rédigés en anglais et en français. Les identifiants restent en anglais pour conserver une API cohérente.
@@ -193,11 +192,11 @@ python -m ruff format --check .
 python -m pytest -q
 ```
 
-La CI exécute ces vérifications avec Python 3.11 et 3.12. Les tests utilisent des fichiers temporaires, des doubles du moteur et un modèle YOLO à poids aléatoires pour vérifier l'intégration sans télécharger de checkpoint. Ce modèle de test n'évalue pas la qualité de détection. Consultez le [rapport d'audit](docs/AUDIT.md) pour les vérifications et limites.
+La CI exécute ces vérifications avec Python 3.11 et 3.12. Les tests utilisent des fichiers temporaires, des doubles du moteur et un modèle YOLO à poids aléatoires pour vérifier l'intégration sans télécharger de checkpoint. Ce modèle de test n'évalue pas la qualité de détection.
 
 ## Résultats et limites scientifiques
 
-Les images de `results/` sont des artefacts historiques. Le dépôt ne contient ni le checkpoint entraîné ni un ensemble complet de mesures permettant de reproduire les anciens chiffres. Aucune précision, durée d'entraînement ou accélération n'est donc garantie par ce README.
+Le dépôt ne contient pas de checkpoint entraîné ni de mesures de précision reproductibles. Les six images JPEG de `images/` servent aux exemples de l’interface ; elles ne constituent pas un jeu de validation indépendant. Leur source est le dataset PCB Defects cité ci-dessus ; ses droits restent applicables. Aucune précision, durée d'entraînement ou accélération n'est donc garantie par ce README.
 
 Mesurez les résultats sur un jeu de test indépendant, idéalement séparé par carte physique et acquisition. **mAP@0.5 n'est pas la précision** : les quatre mesures restent distinctes. Une absence de détection à un seuil donné ne certifie pas qu'une carte est sans défaut.
 
@@ -209,10 +208,10 @@ Mesurez les résultats sur un jeu de test indépendant, idéalement séparé par
 4. Upload an image, set confidence and IoU, and inspect the annotated result, table and JSON. CPU inference is serialized, with a 16-request queue, two PyTorch threads, a 20 MiB upload limit and a 20-megapixel decoded-image limit. Temporary Gradio files are cleaned hourly once at least one hour old.
 5. CLI examples above also apply in English. `detect` accepts files or recursive directories; `--save` opts into writing annotations. `export --format all` means ONNX plus TorchScript. Other export backends need separate dependencies.
 6. Training uses paired VOC XML files, rejects unknown classes and ambiguous image matches, preserves annotated negative images, and creates deterministic board-group splits. Numeric filename prefixes identify boards by default; verify that convention for your dataset. `--split-mode image` is an explicit alternative. A manifest records membership and guards generated-directory replacement.
-7. GPU training uses `requirements-core.txt` with a suitable GPU PyTorch installation, not the Linux CPU deployment requirements. Kaggle uses the same CLI through `run_kaggle.py`. New runs receive distinct directories; `pcb_model.pt` and `training_summary.json` are aliases for the latest run.
+7. GPU training uses `requirements-core.txt` with a suitable GPU PyTorch installation, not the Linux CPU deployment requirements. Kaggle uses the same `python main.py train` command. New runs receive distinct directories; `pcb_model.pt` and `training_summary.json` are aliases for the latest run.
 8. For the optional desktop UI, install `gui_test/requirements.txt` and run `python -m gui_test.app`; system Tkinter is required. Source comments explaining design decisions are bilingual.
 
-Historical screenshots are not reproducible benchmarks. Validate accuracy on independent PCB data; a successful software test or a lack of detections is not evidence of manufacturing quality.
+The six bundled example images are not an independent evaluation dataset. Validate accuracy on independent PCB data; a successful software test or a lack of detections is not evidence of manufacturing quality.
 
 ## Licence / License
 

@@ -7,7 +7,9 @@ from tkinter import messagebox, ttk
 from tkinter.scrolledtext import ScrolledText
 from typing import Any
 
-from .config import APP_TITLE, APP_VERSION
+from src import __version__ as APP_VERSION
+
+from .config import APP_TITLE
 from .tasks import run_background
 
 logger = logging.getLogger(__name__)

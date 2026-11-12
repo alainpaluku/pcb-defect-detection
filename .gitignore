@@ -1,67 +1,46 @@
-# Python
+# EN: Python caches, packages and build output. FR: Caches Python, paquets et compilations.
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
-.Python
 *.egg-info/
 .eggs/
-dist/
 build/
+dist/
 
-# Virtual environments
+# EN: Local environments and credentials. FR: Environnements locaux et identifiants.
+.venv/
 venv/
 env/
 .env
-.venv/
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Jupyter
-.ipynb_checkpoints/
-*.ipynb_checkpoints
-
-# Models (large files)
-models/*.pt
-models/*.onnx
-models/*.pth
-models/*.tflite
-models/*.torchscript
-
-# Log files
-*.log
-
-# Kaggle credentials
+.env.*
+!.env.example
 kaggle.json
 
-# OS
-.DS_Store
-Thumbs.db
-
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-
-# Temporary files
-*.tmp
-*.bak
-*~
-
-# EN: Generated data and development artifacts. FR: Données générées et fichiers de développement.
+# EN: Generated datasets, runs and model weights. FR: Jeux générés, exécutions et poids.
 data/
 output/
 runs/
+results/
 .gradio/
-.ruff_cache/
-coverage.xml
-*.onnx
 *.pt
 *.pth
+*.onnx
 *.torchscript
-.env.*
-!.env.example
+*.tflite
+
+# EN: Developer tools and temporary files. FR: Outils de développement et fichiers temporaires.
+.pytest_cache/
+.ruff_cache/
+.coverage*
+coverage.xml
+htmlcov/
+.ipynb_checkpoints/
+.idea/
+.vscode/
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db

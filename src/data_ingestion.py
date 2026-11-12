@@ -31,8 +31,6 @@ class ImageItem:
 
     image_path: Path
     annotation_path: Path | None = None
-    class_name: str | None = None
-    source_type: str = "xml"
 
 
 class VOCConverter:
@@ -239,10 +237,3 @@ class DataIngestion:
 
     def get_yaml_path(self) -> Path:
         return self.yolo_path / "dataset.yaml"
-
-    def get_stats(self) -> dict[str, int]:
-        return {
-            "total_images": len(self.all_images),
-            "with_xml": len(self.all_images),
-            "from_folders": 0,
-        }

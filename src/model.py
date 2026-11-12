@@ -178,9 +178,3 @@ class PCBDetector:
             "precision": float(results.box.mp),
             "recall": float(results.box.mr),
         }
-
-    @classmethod
-    def load_trained(cls, model_path: str | Path) -> "PCBDetector":
-        detector = cls(model_path)
-        detector.ensure_pcb_model()
-        return detector

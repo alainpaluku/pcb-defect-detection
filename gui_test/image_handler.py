@@ -5,9 +5,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageTk
 
-from src.config import IMAGE_EXTENSIONS
 from src.space import SpaceSettings, load_image
-from src.utils import get_all_images
 
 from .config import DEFECT_COLORS
 
@@ -20,7 +18,6 @@ class ImageManager:
     def __init__(self):
         self.current_image: Image.Image | None = None
         self.current_image_path: str | None = None
-        self.display_image: Image.Image | None = None
         self.photo_image: ImageTk.PhotoImage | None = None
         self.zoom_factor = 1.0
         self.detections = []
@@ -60,7 +57,7 @@ class ImageManager:
         self.detections = detections
         logger.info(f"Set {len(detections)} detections for visualization")
 
-    def prepare_display_image(self, canvas_size: tuple[int, int]) -> ImageTk.PhotoImage | None:
+    def prepare_display_image(self) -> ImageTk.PhotoImage | None:
         """Prepare image for display with zoom and detections."""
         if self.current_image is None:
             return None
@@ -77,7 +74,6 @@ class ImageManager:
             if self.detections:
                 display_image = self._draw_detections(display_image)
 
-            self.display_image = display_image
             self.photo_image = ImageTk.PhotoImage(display_image)
 
             return self.photo_image
@@ -146,28 +142,7 @@ class ImageManager:
         """Clear the current image and detections."""
         self.current_image = None
         self.current_image_path = None
-        self.display_image = None
         self.photo_image = None
         self.zoom_factor = 1.0
         self.detections = []
         logger.info("Image cleared")
-
-
-def find_images_in_directory(directory: str | Path) -> list[Path]:
-    """Find all image files in a directory."""
-    directory = Path(directory)
-
-    if not directory.exists() or not directory.is_dir():
-        return []
-
-    return get_all_images(directory, recursive=True)
-
-
-def validate_image_path(image_path: str | Path) -> bool:
-    """Validate if the image path exists and has a supported format."""
-    path = Path(image_path)
-
-    if not path.is_file():
-        return False
-
-    return path.suffix.lower() in IMAGE_EXTENSIONS
