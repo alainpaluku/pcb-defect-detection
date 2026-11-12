@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-"""PCB Defect Detection - Entry Point."""
+"""EN: Local CLI launcher. FR: Lanceur local en ligne de commande."""
 
 from src.main import main
 

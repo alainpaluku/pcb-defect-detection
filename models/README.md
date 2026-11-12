@@ -1,57 +1,9 @@
-# Models Directory
+# Poids entraînés · Trained weights
 
-This directory contains trained PCB defect detection models **downloaded from Kaggle**.
+FR : Aucun poids entraîné n'est livré avec le dépôt. Placez un checkpoint YOLO de détection entraîné sur les six classes PCB dans `models/pcb_model.pt`. La CLI et l'application de bureau utilisent ce fichier ; l'interface web peut aussi le télécharger depuis un dépôt de modèles Hugging Face. Consultez les variables `PCB_MODEL_*` dans le [README principal](../README.md#déploiement-sur-hugging-face-spaces).
 
-## ⚠️ IMPORTANT: You must train and download models first!
+EN: No trained checkpoint is included. Place a YOLO detection checkpoint trained on the six PCB classes in `models/pcb_model.pt`. CLI and desktop tools can use that file; the web app can also download weights from a Hugging Face model repository. See the [main README](../README.md#english-guide).
 
-### Step 1: Train on Kaggle
-Follow the main README instructions to train your model on Kaggle.
+Les fichiers `.pt` sont ignorés par Git. Ne chargez que des poids de confiance. Un modèle COCO générique ne détecte pas les défauts PCB et est refusé. L'export ONNX est une commande facultative, sans vitesse garantie ; l'interface de bureau et le Space utilisent `.pt`.
 
-### Step 2: Download Models from Kaggle
-After training completes, use this code in your Kaggle notebook:
-
-```python
-import zipfile
-from IPython.display import FileLink
-
-with zipfile.ZipFile('/kaggle/working/pcb_models.zip', 'w') as zipf:
-    zipf.write('/kaggle/working/pcb_model.pt', 'pcb_model.pt')          # Compatibility
-    zipf.write('/kaggle/working/pcb_model.onnx', 'pcb_model.onnx')      # Best performance
-
-FileLink('/kaggle/working/pcb_models.zip')
-```
-
-### Step 3: Place Models Here
-Extract the downloaded zip and place the files in this directory:
-
-```
-models/
-├── pcb_model.onnx    # 🚀 BEST performance (~8ms) - GUI will use this
-├── pcb_model.pt      # ⚡ Compatibility fallback (~15ms)
-└── README.md         # This file
-```
-
-## Model Performance
-
-| Format | File | Speed | Usage |
-|--------|------|-------|-------|
-| 🚀 **ONNX** | `pcb_model.onnx` | ~8ms | **GUI automatically selects this** |
-| ⚡ PyTorch | `pcb_model.pt` | ~15ms | Compatibility fallback |
-
-## Usage with GUI
-
-1. Place both model files in this directory
-2. Launch the GUI: `python -m gui_test.app`
-3. The GUI will **automatically detect and load the ONNX model** for best performance
-4. If ONNX is not available, it will use the PyTorch model
-
-## File Structure After Setup
-
-```
-models/
-├── pcb_model.onnx    # Downloaded from Kaggle
-├── pcb_model.pt      # Downloaded from Kaggle
-└── README.md
-```
-
-The GUI test interface will automatically find and use these models!
+`.pt` files are ignored by Git. Load trusted checkpoints only. Generic COCO weights are rejected. ONNX export is optional and comes with no latency guarantee; desktop and Space interfaces use `.pt`.

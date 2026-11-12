@@ -1,0 +1,6 @@
+# EN: Shared ML dependencies; one OpenCV provider only. FR: Un seul fournisseur OpenCV.
+ultralytics-opencv-headless==8.4.210
+Pillow>=12.0,<13
+numpy>=2.0,<3
+PyYAML>=6.0.2,<7
+defusedxml==0.7.1
