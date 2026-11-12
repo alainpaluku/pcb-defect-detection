@@ -2,6 +2,5 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch==2.10.0+cpu; sys_platform == 'linux'
 torchvision==0.25.0+cpu; sys_platform == 'linux'
--r requirements-core.txt
-gradio==6.31.0
-huggingface-hub==2.4.0
+# EN: All application dependencies live in pyproject.toml. FR: Dépendances dans pyproject.toml.
+-e .[web]

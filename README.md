@@ -17,30 +17,17 @@ tags:
   - pcb
 ---
 
-# PCB Defect Detection · Détection de défauts PCB
+# Détection de défauts PCB · PCB Defect Detection
 
-Détection de six types de défauts de circuits imprimés avec YOLO11. Le même moteur Python alimente une interface **Gradio pour Hugging Face Spaces**, une application de bureau Tk et les commandes d'entraînement, de détection et d'export.
+Détection de six types de défauts sur des circuits imprimés avec YOLO11. Le projet propose une interface web Gradio pour Hugging Face Spaces, une interface de bureau Tk et une commande pour entraîner, inspecter ou exporter un modèle.
 
-**Les poids entraînés ne sont pas inclus.** Fournissez un modèle PCB `.pt` local ou hébergé dans un dépôt de modèles Hugging Face. L'application web démarre sans poids, mais une inspection nécessite un modèle entraîné sur les six classes ci-dessous. Un modèle YOLO générique COCO est refusé.
+**Les poids entraînés ne sont pas fournis.** Pour inspecter une image, utilisez votre checkpoint PCB `.pt`. Un modèle YOLO générique COCO est refusé. L'interface web peut démarrer avant que les poids soient configurés.
 
-**English:** Detect six PCB defect classes with YOLO11 using a Gradio Space, a desktop application or the CLI. **Trained weights are not included.** Supply your own PCB `.pt` checkpoint locally or through the Hugging Face Hub. The web UI can start without weights; inference requires a compatible PCB model. See the [English guide](#english-guide).
+**English:** YOLO11 PCB defect detection with web, desktop and command-line interfaces. Trained weights are not included. Supply your own six-class PCB checkpoint. See the [English instructions](#english-instructions).
 
-## Classes
+## Installation CPU et démarrage
 
-| ID canonique / Canonical ID | Classe / Class | Français | English |
-|---|---|---|---|
-| 0 | `missing_hole` | Trou manquant | Missing drill hole |
-| 1 | `mouse_bite` | Échancrure du cuivre | Copper edge notch |
-| 2 | `open_circuit` | Piste interrompue | Broken trace |
-| 3 | `short` | Court-circuit | Short circuit |
-| 4 | `spur` | Excroissance de cuivre | Copper protrusion |
-| 5 | `spurious_copper` | Cuivre parasite | Unwanted copper |
-
-Les noms du checkpoint font autorité : un ordre de classes différent est correctement traduit vers ces identifiants canoniques. Les variantes de casse, d'espaces et de tirets sont acceptées.
-
-## Démarrage local
-
-Python **3.11 à 3.13** ; la configuration Spaces cible **3.11**. Exécutez les commandes depuis la racine du dépôt.
+Python **3.11 à 3.13** ; Hugging Face Spaces utilise **3.11**.
 
 ```bash
 git clone https://github.com/alainpaluku/pcb-defect-detection.git
@@ -53,170 +40,166 @@ python app.py
 
 Ouvrez `http://localhost:7860`. Sous Windows, activez l'environnement avec `.venv\Scripts\activate`.
 
-`requirements.txt` installe PyTorch CPU sur Linux. Pour entraîner sur GPU, utilisez **un environnement séparé**, installez la version PyTorch adaptée à votre matériel suivant la [documentation PyTorch](https://pytorch.org/get-started/locally/), puis `requirements-core.txt`. La variante [Ultralytics headless](https://docs.ultralytics.com/quickstart/#headless-install) évite les dépendances graphiques OpenCV sur les serveurs ; Tk affiche les images avec Pillow.
+Il existe **un seul fichier `requirements.txt`**, à la racine. Il sélectionne PyTorch CPU sous Linux et installe l'option web du projet. Les dépendances communes et les options sont déclarées dans **`pyproject.toml`** ; aucun autre fichier `requirements` n'est nécessaire. L'installation est éditable : les modifications du code sont immédiatement utilisées.
 
-Pour une utilisation locale sans téléchargement, créez le dossier `models/` et placez votre checkpoint dans `models/pcb_model.pt`. Ne chargez que des poids `.pt` provenant d'une source de confiance : ces fichiers ne constituent pas un format de données neutre.
+Après l'installation CPU ci-dessus, ajoutez uniquement les options souhaitées :
 
-## Déploiement sur Hugging Face Spaces
+| Usage | Commande |
+|---|---|
+| Interface de bureau | `python -m pip install -e ".[gui]"` |
+| Tests et vérifications du projet complet | `python -m pip install -e ".[gui,dev]"` |
+| Export ONNX | `python -m pip install -e ".[onnx]"` |
+
+Pour un environnement GPU, suivez la [section entraînement](#entraînement-local-et-kaggle) : le fichier CPU remplacerait une installation GPU de PyTorch sous Linux.
+
+## Configurer les poids
+
+Deux possibilités pour le service web :
+
+- Créez `models/` et placez votre checkpoint dans `models/pcb_model.pt`.
+- Configurez `PCB_MODEL_REPO` avec votre dépôt de modèles Hugging Face, par exemple `votre-compte/pcb-defect-model`.
+
+`PCB_MODEL_PATH` permet de choisir un autre fichier local. Lorsqu'il est défini, il est prioritaire. Sinon, le service utilise `PCB_MODEL_REPO`, puis, si aucun dépôt n'est défini, `models/pcb_model.pt`. Une source explicite invalide déclenche une erreur. Seuls les poids provenant d'une source de confiance doivent être chargés.
+
+Les six noms de classes doivent être présents dans le checkpoint. Leur ordre peut différer : le moteur traduit les résultats vers les identifiants suivants.
+
+| ID | Classe | Français | English |
+|---|---|---|---|
+| 0 | `missing_hole` | Trou manquant | Missing drill hole |
+| 1 | `mouse_bite` | Échancrure du cuivre | Copper edge notch |
+| 2 | `open_circuit` | Piste interrompue | Broken trace |
+| 3 | `short` | Court-circuit | Short circuit |
+| 4 | `spur` | Excroissance de cuivre | Copper protrusion |
+| 5 | `spurious_copper` | Cuivre parasite | Unwanted copper |
+
+## Hugging Face Spaces
 
 1. Créez un Space avec le SDK **Gradio**.
-2. Copiez les fichiers de ce dépôt dans le dépôt du Space, en conservant le bloc YAML en tête de ce README. N'envoyez pas `.venv/`, `data/`, `output/` ou des secrets.
-3. Dans **Settings → Variables and secrets**, configurez les variables ci-dessous. Le chemin le plus simple est un dépôt de modèles contenant votre `pcb_model.pt`.
-4. Laissez le Space installer ses dépendances puis ouvrir l'interface. Lancez une inspection pour vérifier le chargement des poids.
+2. Envoyez les fichiers du projet, notamment `app.py`, `src/`, `gui_test/`, `pyproject.toml`, `requirements.txt`, `README.md` et `images/`. L'installation du paquet inclut `src` et `gui_test`, mais les dépendances graphiques restent facultatives. Gardez le bloc YAML en tête de ce README.
+3. Dans **Settings → Variables and secrets**, définissez `PCB_MODEL_REPO` ou fournissez les poids locaux. Pour un dépôt privé, ajoutez `HF_TOKEN` comme **secret** de lecture.
+4. Attendez la construction du Space puis lancez une inspection. Les poids Hub sont téléchargés et chargés à la première requête, puis réutilisés.
 
-| Variable | Valeur par défaut | Fonction |
+Le service traite une image à la fois et accepte jusqu'à 16 requêtes en attente. Il retourne une image annotée, un tableau et les résultats JSON. Les fichiers temporaires Gradio âgés d'au moins une heure sont nettoyés chaque heure. N'envoyez pas votre environnement `.venv/`, vos données d'entraînement ou vos secrets.
+
+| Variable | Défaut | Fonction |
 |---|---|---|
-| `PCB_MODEL_PATH` | Non définie | Chemin local explicite, prioritaire ; chemin relatif à la racine du projet |
-| `PCB_MODEL_REPO` | Non définie | Dépôt Hugging Face, par exemple `votre-compte/pcb-defect-model` |
-| `PCB_MODEL_FILENAME` | `pcb_model.pt` | Nom du fichier dans le dépôt de modèles |
-| `PCB_MODEL_REVISION` | `main` | Branche, tag ou commit ; fixer un commit pour reproduire un déploiement |
-| `HF_TOKEN` | Non défini | **Secret** de lecture requis seulement pour des poids privés ou à accès restreint |
+| `PCB_MODEL_PATH` | Non définie | Chemin local, relatif à la racine du projet ou absolu |
+| `PCB_MODEL_REPO` | Non définie | Dépôt de modèles Hugging Face |
+| `PCB_MODEL_FILENAME` | `pcb_model.pt` | Fichier à télécharger |
+| `PCB_MODEL_REVISION` | `main` | Branche, tag ou commit du modèle |
+| `HF_TOKEN` | Non défini | Secret d'accès aux poids privés |
 | `PCB_DEVICE` | `cpu` | Périphérique d'inférence |
 | `PCB_IMAGE_SIZE` | `640` | Taille d'inférence, multiple de 32 |
-| `PCB_CPU_THREADS` | `2` | Nombre de threads PyTorch |
-| `PCB_MAX_DETECTIONS` | `300` | Nombre maximal de détections par image |
-| `PCB_MAX_FILE_MB` | `20` | Taille maximale du fichier importé en Mio (20 × 1024² octets) |
-| `PCB_MAX_PIXELS` | `20000000` | Nombre maximal de pixels avant décodage |
-| `GRADIO_SERVER_NAME` | `0.0.0.0` | Adresse d'écoute |
+| `PCB_CPU_THREADS` | `2` | Threads PyTorch |
+| `PCB_MAX_DETECTIONS` | `300` | Maximum de boîtes par image |
+| `PCB_MAX_FILE_MB` | `20` | Limite de fichier en Mio |
+| `PCB_MAX_PIXELS` | `20000000` | Limite de pixels avant décodage |
+| `GRADIO_SERVER_NAME` | `0.0.0.0` | Adresse HTTP |
 | `GRADIO_SERVER_PORT` | `7860` | Port HTTP |
 
-Résolution des poids : `PCB_MODEL_PATH` explicite → dépôt `PCB_MODEL_REPO` → `models/pcb_model.pt`. Une source explicite invalide déclenche une erreur, sans remplacement silencieux par un autre modèle. `.env.example` est un exemple ; il n'est pas chargé automatiquement.
+`.env.example` décrit ces variables ; il n'est pas chargé automatiquement. La configuration fournie cible les Spaces CPU classiques. Le temps affiché mesure la prédiction et exclut le téléchargement des poids et le rendu.
 
-Les poids sont téléchargés à la première inspection, conservés dans le cache Hugging Face puis chargés une seule fois par application. L'interface ne permet pas aux visiteurs d'importer des checkpoints. Les erreurs détaillées figurent dans les journaux du Space.
+Références : [dépendances Spaces](https://huggingface.co/docs/hub/spaces-dependencies), [configuration Spaces](https://huggingface.co/docs/hub/spaces-config-reference), [options de dépendances Python](https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#dependencies-and-requirements).
 
-Les choix de déploiement suivent les documentations officielles des [Gradio Spaces](https://huggingface.co/docs/hub/spaces-sdks-gradio), de la [configuration Spaces](https://huggingface.co/docs/hub/spaces-config-reference) et du [cache de téléchargement Hub](https://huggingface.co/docs/huggingface_hub/en/guides/download).
+## Inspection et export
 
-### Ressources et limites
-
-- Une inférence à la fois, avec une file d'attente de 16 requêtes pour borner la charge.
-- Traitement en mémoire, sans création systématique de dossiers `runs/`.
-- Limites de fichier et de pixels, conversion RGB et prise en compte de l'orientation EXIF.
-- Nettoyage du cache temporaire Gradio chaque heure pour les fichiers âgés d'au moins une heure ; ce n'est pas un effacement immédiat après une requête.
-- Le temps affiché mesure la prédiction, en excluant le téléchargement, le chargement des poids et le rendu. La première prédiction peut inclure l'initialisation du moteur.
-- Les performances réelles dépendent du modèle, du processeur et de l'image. Réduire la taille d'inférence peut accélérer le traitement et faire perdre de petits défauts : mesurer ce compromis sur vos données.
-
-La configuration fournie vise les Spaces CPU classiques. Une variante GPU nécessite un environnement PyTorch adapté ; ZeroGPU n'est pas intégré.
-
-## Ligne de commande
+Exécutez les commandes depuis la racine du dépôt :
 
 ```bash
-# FR: Inspecter une image. EN: Inspect one image.
+# FR : Inspecter une image. EN: Inspect one image.
 python main.py detect images/01_short_01.jpg --model models/pcb_model.pt --conf 0.3 --iou 0.5
 
-# FR: Parcourir un dossier récursivement. EN: Recursively inspect a directory.
+# FR : Inspecter un dossier récursivement. EN: Recursively inspect a folder.
 python main.py detect images --model models/pcb_model.pt
 
-# FR: Entraîner un modèle. EN: Train a model.
-python main.py train --data data/pcb-defects --epochs 50 --batch 16 --model yolo11m.pt
-
-# FR: Export ONNX facultatif. EN: Optional ONNX export.
-python -m pip install -r requirements-export.txt
+# FR : Exporter vers ONNX. EN: Export to ONNX.
+python -m pip install -e ".[onnx]"
 python main.py export --model models/pcb_model.pt --format onnx --output output/exports
 ```
 
-`--save` active l'enregistrement des images annotées par Ultralytics. L'inspection de dossiers retourne les chemins relatifs pour distinguer deux images de même nom. Les variables `PCB_MODEL_*` concernent le service web ; la CLI utilise `--model` ou la recherche locale dans `models/`, `output/`, puis la racine.
+`--save` active l'enregistrement des images annotées ; l'inspection n'écrit pas d'image par défaut. Sans `--model`, la CLI cherche un checkpoint dans `models/pcb_model.pt`, `output/pcb_model.pt`, puis `pcb_model.pt`. Les variables `PCB_MODEL_*` concernent uniquement le service web.
 
-`--format all` exporte **ONNX et TorchScript**. Les formats `tflite`, `coreml` et `openvino` sont accessibles explicitement mais nécessitent leurs propres dépendances et plateformes ; ils ne sont pas installés avec l'application. Les erreurs d'export sont remontées et une destination existante n'est pas écrasée par la copie.
+`--format all` exporte ONNX et TorchScript. Les autres formats proposés par `--help` demandent leurs propres dépendances et plateformes ; l'option `onnx` ne les installe pas.
 
-## Données et entraînement
+## Entraînement local et Kaggle
 
-Le pipeline attend des images et des annotations VOC XML correspondantes, par exemple celles du jeu [PCB Defects sur Kaggle](https://www.kaggle.com/datasets/akhatova/pcb-defects). Le téléchargement du dataset n'est pas automatique.
-
-```text
-data/pcb-defects/
-├── images/
-│   ├── Missing_hole/01_missing_hole_01.jpg
-│   └── Short/02_short_01.jpg
-└── Annotations/
-    ├── Missing_hole/01_missing_hole_01.xml
-    └── Short/02_short_01.xml
-```
-
-Le nom sans extension permet l'association ; les dossiers de classe départagent les noms identiques. Une association encore ambiguë est refusée. Les images sans XML ne sont pas utilisées. Un XML sans objet constitue un exemple négatif valide. Les dimensions XML doivent correspondre à l'image. Les coordonnées sont traitées comme des coins en pixels, bornées à l'image, puis normalisées ; vérifiez la convention de coordonnées de tout autre dataset.
-
-La séparation par défaut regroupe les images partageant le préfixe numérique avant `_`, par exemple `01_…`, pour garder les variantes d'une même carte dans un seul jeu. Au moins deux groupes sont requis. Cette convention vient des noms du dataset ; pour un autre jeu, vérifiez les identifiants de cartes. `--split-mode image` autorise une séparation par image, mais ne protège pas contre la présence de variantes d'une même carte des deux côtés. Les copies de contenu strictement identique sont refusées.
+Utilisez un environnement séparé et installez d'abord le PyTorch adapté à votre GPU selon la [documentation officielle](https://pytorch.org/get-started/locally/). Installez ensuite uniquement le moteur :
 
 ```bash
-python main.py train --data data/pcb-defects --output output \
-  --epochs 50 --batch 16 --img-size 640 --workers 2 \
-  --val-split 0.2 --seed 42 --split-mode board
+python -m pip install -e .
+python main.py train --data data/pcb-defects --epochs 50 --batch 16 --device 0
 ```
 
-Le ratio peut s'écarter de 20 % lorsque les groupes ont des tailles différentes. Le manifeste `output/yolo_dataset/.pcb-dataset.json` conserve les associations et la séparation. Seul un dataset généré portant ce marqueur peut être remplacé. Un ancien dossier YOLO sans marqueur doit être conservé ailleurs ou une autre destination doit être choisie.
-
-Les entraînements successifs utilisent `pcb_yolo`, `pcb_yolo2`, etc. Le meilleur checkpoint du nouvel entraînement est évalué puis copié vers `output/pcb_model.pt`. Ce dernier fichier et `training_summary.json` représentent **la dernière exécution** ; les dossiers d'entraînement précédents sont conservés. Les graphiques sont repris des artefacts Ultralytics, lorsqu'ils sont disponibles. Le JSON contient la configuration et les métriques `map50`, `map50_95`, `precision`, `recall`.
-
-### Kaggle
-
-Ajoutez le dataset à un notebook, activez Internet et le GPU, puis exécutez :
+Sur Kaggle, ajoutez le dataset [PCB Defects](https://www.kaggle.com/datasets/akhatova/pcb-defects), activez Internet et un GPU, puis exécutez depuis le dépôt :
 
 ```python
-!git clone https://github.com/alainpaluku/pcb-defect-detection.git
-%cd pcb-defect-detection
-!pip install -r requirements-core.txt
+!pip install -e .
 !python main.py train --epochs 100 --device 0 --workers 2
 ```
 
-Pour deux GPU disponibles, utilisez `--device 0,1`. Ne remplacez pas le PyTorch GPU de Kaggle par `requirements.txt`, qui cible le déploiement CPU Linux. Les résultats sont placés dans `/kaggle/working/`, notamment `pcb_model.pt` et `training_summary.json`. Aucun export `.pth` ou ONNX implicite n'est annoncé.
+Cette commande conserve le PyTorch GPU déjà installé s'il satisfait les dépendances. Pour deux GPU, utilisez `--device 0,1`. N'utilisez pas `requirements.txt` dans cet environnement GPU Linux.
 
-## Application de bureau
+Le pipeline attend des images et des annotations **VOC XML** portant le même nom sans extension. Les dossiers de classe permettent de départager les noms identiques :
+
+```text
+data/pcb-defects/
+├── images/Short/01_short_01.jpg
+└── Annotations/Short/01_short_01.xml
+```
+
+Les correspondances ambiguës, dimensions incorrectes, classes inconnues et images strictement identiques sont refusées. Les images sans XML ne sont pas utilisées ; un XML sans objet est un exemple négatif valide. Vérifiez la convention de coordonnées VOC de vos données.
+
+Par défaut, les images partageant un préfixe numérique comme `01_` sont regroupées dans un même jeu pour limiter les fuites entre cartes. Il faut au moins deux groupes. Vérifiez cette convention sur un autre dataset ; `--split-mode image` autorise explicitement une séparation par image. Les options `--val-split` et `--seed` contrôlent le ratio et la graine.
+
+Les sorties vont dans `output/`, ou `/kaggle/working/` sur Kaggle. Chaque entraînement reçoit son dossier `pcb_yolo*`. Le meilleur checkpoint de cette exécution est évalué, puis copié vers `pcb_model.pt` avec un `training_summary.json`. Ces deux fichiers représentent la dernière exécution. Le dataset converti contient un manifeste et seul un dossier généré portant ce marqueur peut être remplacé.
+
+## Interface de bureau
 
 ```bash
-python -m pip install -r gui_test/requirements.txt
+python -m pip install -e ".[gui]"
 python -m gui_test.app
 ```
 
-Tkinter doit être disponible via votre installation Python ou le gestionnaire de paquets du système. L'application charge les modèles `.pt`, permet les réglages de confiance et IoU, traite les dossiers récursivement et exporte les résultats en JSON, CSV ou texte UTF-8. Les échecs d'images d'un lot sont affichés séparément des inspections sans détection.
+Tkinter doit être disponible dans votre installation Python. L'interface utilise les poids `.pt`, les seuils de confiance et IoU, le zoom, le traitement récursif des dossiers et les exports JSON, CSV ou texte UTF-8. Les erreurs d'images sont distinguées des inspections sans détection.
 
-## Architecture et qualité
+## Structure et vérifications
 
 ```text
-app.py                       Interface Gradio / Gradio UI
-main.py                      Commandes locales et Kaggle / Local and Kaggle CLI
-src/config.py                Configuration validée / Validated settings
-src/model.py                 Adaptateur YOLO / YOLO adapter
-src/detector.py               Résultats structurés / Structured results
-src/space.py                  Service web et poids Hub / Web service and Hub weights
-src/data_ingestion.py         VOC, séparation et manifeste / VOC, splits and manifest
-src/trainer.py                Entraînement et artefacts / Training and artifacts
-gui_test/                    Interface de bureau / Desktop UI
-tests/                       Régressions et intégration / Regression and integration tests
+app.py              Interface web Gradio
+main.py             Commandes d'inspection, d'entraînement et d'export
+pyproject.toml      Dépendances communes, options et outils de qualité
+requirements.txt    Installation web et choix CPU pour Linux / Spaces
+src/                Configuration, moteur YOLO, données et entraînement
+gui_test/           Interface de bureau facultative
+images/             Six exemples utilisés par l'interface web
+tests/              Tests de non-régression et d'intégration
+.github/workflows/  Vérifications automatiques
 ```
 
-Les commentaires de conception sont rédigés en anglais et en français. Les identifiants restent en anglais pour conserver une API cohérente.
-
 ```bash
-python -m pip install -r requirements-dev.txt
+python -m pip install -e ".[gui,dev]"
 python -m ruff check .
 python -m ruff format --check .
 python -m pytest -q
 ```
 
-La CI exécute ces vérifications avec Python 3.11 et 3.12. Les tests utilisent des fichiers temporaires, des doubles du moteur et un modèle YOLO à poids aléatoires pour vérifier l'intégration sans télécharger de checkpoint. Ce modèle de test n'évalue pas la qualité de détection.
+Les commentaires de conception sont bilingues français/anglais. La CI cible Python 3.11 et 3.12. Les tests incluent une inférence réelle et un export TorchScript avec des poids aléatoires : ils vérifient le fonctionnement logiciel, pas la précision d'un modèle PCB entraîné.
 
-## Résultats et limites scientifiques
+Les exemples de `images/` proviennent du dataset PCB Defects cité ci-dessus et ne forment pas un jeu de validation indépendant. Aucune vitesse ni précision n'est garantie. Mesurez mAP, précision et rappel sur vos propres données ; une absence de détection ne certifie pas qu'une carte est sans défaut.
 
-Le dépôt ne contient pas de checkpoint entraîné ni de mesures de précision reproductibles. Les six images JPEG de `images/` servent aux exemples de l’interface ; elles ne constituent pas un jeu de validation indépendant. Leur source est le dataset PCB Defects cité ci-dessus ; ses droits restent applicables. Aucune précision, durée d'entraînement ou accélération n'est donc garantie par ce README.
+## English instructions
 
-Mesurez les résultats sur un jeu de test indépendant, idéalement séparé par carte physique et acquisition. **mAP@0.5 n'est pas la précision** : les quatre mesures restent distinctes. Une absence de détection à un seuil donné ne certifie pas qu'une carte est sans défaut.
+- **CPU/web:** create a Python 3.11 virtual environment, run `python -m pip install -r requirements.txt`, then `python app.py`. Open `http://localhost:7860`.
+- **Dependencies:** there is one root `requirements.txt`. Shared dependencies and optional `web`, `gui`, `dev` and `onnx` features are declared in `pyproject.toml`. Add features with `python -m pip install -e ".[gui,dev]"`, for example.
+- **Weights/Spaces:** supply trusted six-class PCB `.pt` weights locally or set `PCB_MODEL_REPO`. Use a Gradio Space with this README's YAML header and store `HF_TOKEN` as a secret for private models. `.env.example` is not loaded automatically.
+- **GPU/Kaggle:** keep a suitable GPU PyTorch installation, then run `python -m pip install -e .` and `python main.py train`. Avoid the Linux CPU requirements file in that environment.
+- **Desktop:** install `.[gui]` and run `python -m gui_test.app`; system Tkinter is required.
+- **Validation:** the commands above cover inspection, export and quality checks. Random-weight integration tests and the six bundled images are not evidence of PCB detection accuracy.
 
-## English guide
+## Licence · License
 
-1. Create a Python 3.11 virtual environment, install `requirements.txt`, then run `python app.py`.
-2. Put trusted PCB weights in `models/pcb_model.pt`, or set `PCB_MODEL_REPO`, `PCB_MODEL_FILENAME` and optionally `PCB_MODEL_REVISION`. An explicit `PCB_MODEL_PATH` takes precedence. Store `HF_TOKEN` as a Space secret if the model is private. `.env.example` is documentation, not an automatically loaded dotenv file.
-3. Create a **Gradio** Space and upload this repository while preserving the README YAML header. The app starts without weights and loads them on the first inference. It rejects checkpoints with incompatible class names. This repository does not deploy itself or include a public model.
-4. Upload an image, set confidence and IoU, and inspect the annotated result, table and JSON. CPU inference is serialized, with a 16-request queue, two PyTorch threads, a 20 MiB upload limit and a 20-megapixel decoded-image limit. Temporary Gradio files are cleaned hourly once at least one hour old.
-5. CLI examples above also apply in English. `detect` accepts files or recursive directories; `--save` opts into writing annotations. `export --format all` means ONNX plus TorchScript. Other export backends need separate dependencies.
-6. Training uses paired VOC XML files, rejects unknown classes and ambiguous image matches, preserves annotated negative images, and creates deterministic board-group splits. Numeric filename prefixes identify boards by default; verify that convention for your dataset. `--split-mode image` is an explicit alternative. A manifest records membership and guards generated-directory replacement.
-7. GPU training uses `requirements-core.txt` with a suitable GPU PyTorch installation, not the Linux CPU deployment requirements. Kaggle uses the same `python main.py train` command. New runs receive distinct directories; `pcb_model.pt` and `training_summary.json` are aliases for the latest run.
-8. For the optional desktop UI, install `gui_test/requirements.txt` and run `python -m gui_test.app`; system Tkinter is required. Source comments explaining design decisions are bilingual.
+Le code est sous [licence MIT](LICENSE). Les dépendances, poids et datasets conservent leurs licences respectives, notamment la [licence Ultralytics](https://github.com/ultralytics/ultralytics/blob/main/LICENSE).
 
-The six bundled example images are not an independent evaluation dataset. Validate accuracy on independent PCB data; a successful software test or a lack of detections is not evidence of manufacturing quality.
+Project code uses the MIT license. External dependencies, weights and datasets retain their own licenses.
 
-## Licence / License
-
-Le code du projet conserve sa [licence MIT](LICENSE). Les dépendances, les poids et les datasets gardent leurs licences respectives ; consultez notamment la [licence Ultralytics](https://github.com/ultralytics/ultralytics/blob/main/LICENSE). Aucune licence de dataset ou de poids n'est accordée par ce dépôt.
-
-Project code retains its [MIT license](LICENSE). Dependencies, datasets and model weights retain their own licenses. The repository does not grant rights to external weights or datasets.
-
-Auteur / Author: [Alain Paluku](https://github.com/alainpaluku).
+Auteur / Author : [Alain Paluku](https://github.com/alainpaluku).

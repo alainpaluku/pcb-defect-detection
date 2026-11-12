@@ -1,4 +1,0 @@
-# EN: Optional ONNX export. FR: Export ONNX facultatif.
-onnx>=1.17,<2
-onnxruntime>=1.20,<2
-onnxslim>=0.1.82,<1
