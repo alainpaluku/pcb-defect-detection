@@ -1,29 +1,6 @@
-# Core - Latest versions
-ultralytics>=8.3.0  # YOLO11 support
-torch>=2.2.0
-torchvision>=0.17.0
-
-# Image processing
-opencv-python>=4.9.0
-Pillow>=10.2.0
-
-# Data
-numpy>=1.26.0
-pandas>=2.2.0
-
-# Visualization
-matplotlib>=3.8.0
-seaborn>=0.13.0
-
-# Export formats
-onnx>=1.16.0
-onnxruntime>=1.17.0
-
-# Optional export dependencies (install as needed)
-# tensorflow>=2.13.0  # For TensorFlow Lite export
-# coremltools>=7.0    # For Core ML export (macOS only)
-# openvino>=2023.0    # For OpenVINO export
-
-# Optimization
-albumentations>=1.4.0  # Advanced augmentations
-scikit-learn>=1.4.0  # Metrics
+# EN: CPU deployment for Linux Hugging Face Spaces. FR: Déploiement CPU Linux pour Spaces.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.10.0+cpu; sys_platform == 'linux'
+torchvision==0.25.0+cpu; sys_platform == 'linux'
+# EN: All application dependencies live in pyproject.toml. FR: Dépendances dans pyproject.toml.
+-e .[web]

@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pcb-defect-detection"
+version = "3.0.0"
+description = "PCB defect detection with YOLO11, Gradio and a desktop interface"
+requires-python = ">=3.11,<3.14"
+readme = "README.md"
+license = "MIT"
+dependencies = [
+    "torch>=2.2,<3",
+    "torchvision>=0.17,<1",
+    "ultralytics-opencv-headless==8.4.210",
+    "Pillow>=12.0,<13",
+    "numpy>=2.0,<3",
+    "PyYAML>=6.0.2,<7",
+    "defusedxml==0.7.1",
+]
+
+# EN: Install only the features you need. FR: Installer uniquement les fonctions nécessaires.
+[project.optional-dependencies]
+web = ["gradio==6.31.0", "huggingface-hub==2.4.0"]
+gui = ["ttkbootstrap>=1.20,<2"]
+dev = ["pytest>=8.3,<10", "ruff>=0.14,<1"]
+onnx = ["onnx>=1.17,<2", "onnxruntime>=1.20,<2", "onnxslim>=0.1.82,<1"]
+
+[tool.setuptools]
+packages = ["src", "gui_test"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "B", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+"app.py" = ["E402"]

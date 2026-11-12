@@ -1,170 +1,128 @@
-"""Configuration for PCB Defect Detection System."""
+"""EN: Validated, independent settings. FR: Paramètres validés et indépendants."""
 
-import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import ClassVar
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+IMAGE_EXTENSIONS = frozenset({".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp"})
+CLASS_NAMES = ("missing_hole", "mouse_bite", "open_circuit", "short", "spur", "spurious_copper")
 
 
-# Global constants
-IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".JPG", ".JPEG", ".PNG")
+def normalize_class_name(name: str) -> str:
+    """EN: Accept case, spaces and hyphens. FR: Accepter casse, espaces et tirets."""
+    return name.strip().lower().replace("-", "_").replace(" ", "_")
+
+
+def validate_probability(value: float, name: str) -> float:
+    """EN: Reject invalid thresholds, including NaN. FR: Rejeter les seuils invalides."""
+    if not 0 <= value <= 1:
+        raise ValueError(f"{name} must be between 0 and 1 / doit être compris entre 0 et 1")
+    return value
 
 
 @dataclass
 class ModelConfig:
-    """YOLO11 model configuration."""
-    name: str = "yolo11m.pt"  # YOLO11 Medium - best balance precision/speed
+    """EN: Detection training parameters. FR: Paramètres d'entraînement de détection."""
+
+    name: str = "yolo11m.pt"
     img_size: int = 640
     batch_size: int = 16
-    epochs: int = 50  # OPTIMIZED: Reduced from 100 (converges at epoch 20)
-    patience: int = 15  # OPTIMIZED: Early stopping at 15 epochs without improvement
-    learning_rate: float = 0.001  # Optimal LR for YOLO11
-    optimizer: str = "auto"  # YOLO11 automatically chooses
-    augment: bool = True
-    
-    # Optimized augmentations for YOLO11
+    epochs: int = 50
+    patience: int = 15
+    learning_rate: float = 0.001
+    optimizer: str = "auto"
+    workers: int = 2
+    cache: bool | str = False
+    device: str | None = None
     mosaic: float = 1.0
-    mixup: float = 0.15  # OPTIMIZED: Reduced from 0.2 (faster, still effective)
-    copy_paste: float = 0.2  # OPTIMIZED: Reduced from 0.3 (faster preprocessing)
-    degrees: float = 10.0  # Rotation
-    translate: float = 0.2  # Translation
-    scale: float = 0.9  # Scale
-    shear: float = 2.0  # Shear
-    perspective: float = 0.0001  # Perspective
-    flipud: float = 0.5  # Vertical flip (useful for PCB)
-    fliplr: float = 0.5  # Horizontal flip
-    
-    # Convergence parameters
-    warmup_epochs: float = 3.0  # OPTIMIZED: Reduced from 5.0 (faster warmup)
-    warmup_momentum: float = 0.8
-    warmup_bias_lr: float = 0.1
-    weight_decay: float = 0.0005
-    dropout: float = 0.0  # YOLO11 handles better without dropout
-    close_mosaic: int = 10  # OPTIMIZED: Close mosaic earlier (epoch 10 vs 20)
-    
-    # Performance
-    workers: int = 8  # More workers
-    cache: str = "ram"  # Keep in RAM for speed
-    
-    # New YOLO11 features
-    auto_augment: str = "randaugment"  # Automatic augmentation
-    erasing: float = 0.3  # OPTIMIZED: Reduced from 0.4 (faster)
-    crop_fraction: float = 1.0  # Crop fraction
+    mixup: float = 0.0
+    degrees: float = 10.0
+    translate: float = 0.1
+    scale: float = 0.5
+    flipud: float = 0.5
+    fliplr: float = 0.5
+    close_mosaic: int = 10
+
+    def __post_init__(self) -> None:
+        for name in ("img_size", "batch_size", "epochs"):
+            if getattr(self, name) <= 0:
+                raise ValueError(f"{name} must be positive / doit être positif")
+        if self.img_size % 32:
+            raise ValueError("img_size must be a multiple of 32 / doit être un multiple de 32")
+        if self.workers < 0 or self.patience < 0 or self.close_mosaic < 0:
+            raise ValueError("workers, patience and close_mosaic must be nonnegative")
+        if not 0 < self.learning_rate <= 1:
+            raise ValueError("learning_rate must be in (0, 1]")
+        if self.cache not in (False, True, "ram", "disk"):
+            raise ValueError("cache must be False, True, ram or disk")
+        for name in ("mosaic", "mixup", "translate", "scale", "flipud", "fliplr"):
+            validate_probability(getattr(self, name), name)
 
 
 @dataclass
 class InferenceConfig:
-    """Configuration for inference."""
-    conf_threshold: float = 0.3  # Higher threshold for more precision
-    iou_threshold: float = 0.5  # Stricter IoU
-    max_det: int = 300  # Maximum detections
-    agnostic_nms: bool = False  # NMS per class
+    """EN: Bounded CPU defaults for Spaces. FR: Valeurs CPU bornées pour Spaces."""
+
+    conf_threshold: float = 0.3
+    iou_threshold: float = 0.5
+    max_det: int = 300
+    img_size: int = 640
+    agnostic_nms: bool = False
+    device: str = "cpu"
+
+    def __post_init__(self) -> None:
+        validate_probability(self.conf_threshold, "confidence")
+        validate_probability(self.iou_threshold, "iou")
+        if self.max_det <= 0 or self.img_size <= 0 or self.img_size % 32:
+            raise ValueError("max_det must be positive; img_size must be a positive multiple of 32")
 
 
 @dataclass
 class DataConfig:
-    """Data configuration."""
-    kaggle_dataset: str = "akhatova/pcb-defects"
+    """EN: Reproducible splitting. FR: Séparation reproductible des données."""
+
     val_split: float = 0.2
     random_seed: int = 42
+    group_by_board: bool = True
+
+    def __post_init__(self) -> None:
+        if not 0 < self.val_split < 1:
+            raise ValueError("val_split must be strictly between 0 and 1")
 
 
+@dataclass
 class Config:
-    """Central configuration for PCB defect detection."""
-    
-    CLASS_NAMES: List[str] = [
-        "missing_hole",
-        "mouse_bite",
-        "open_circuit",
-        "short",
-        "spur",
-        "spurious_copper"
-    ]
-    
-    NUM_CLASSES: int = len(CLASS_NAMES)
-    
-    # Class name mapping (handles different case conventions)
-    CLASS_MAP: Dict[str, int] = {}
-    
-    @classmethod
-    def _init_class_map(cls) -> None:
-        """Initialize class mapping with different case variants."""
-        for idx, name in enumerate(cls.CLASS_NAMES):
-            variants = {
-                name,                                      # missing_hole
-                name.upper(),                              # MISSING_HOLE
-                name.title(),                              # Missing_Hole
-                name.replace("_", " ").title().replace(" ", "_"),  # Missing_Hole
-            }
-            for variant in variants:
-                cls.CLASS_MAP[variant] = idx
-    
-    @classmethod
-    def get_class_id(cls, class_name: str) -> int:
-        """Returns class ID, case insensitive."""
-        # Direct search
-        if class_name in cls.CLASS_MAP:
-            return cls.CLASS_MAP[class_name]
-        # Case insensitive search
-        lower_name = class_name.lower().replace(" ", "_")
-        for name, idx in cls.CLASS_MAP.items():
-            if name.lower() == lower_name:
-                return idx
-        raise ValueError(f"Unknown class: {class_name}")
-    
-    # Default configurations
-    model: ModelConfig = ModelConfig()
-    inference: InferenceConfig = InferenceConfig()
-    data: DataConfig = DataConfig()
-    
+    """EN: Never share mutable defaults. FR: Ne jamais partager les valeurs mutables."""
+
+    CLASS_NAMES: ClassVar[tuple[str, ...]] = CLASS_NAMES
+    NUM_CLASSES: ClassVar[int] = len(CLASS_NAMES)
+    model: ModelConfig = field(default_factory=ModelConfig)
+    inference: InferenceConfig = field(default_factory=InferenceConfig)
+    data: DataConfig = field(default_factory=DataConfig)
+    output_path: Path = field(default_factory=lambda: Config.get_output_path())
+
+    @staticmethod
+    def get_class_id(class_name: str) -> int:
+        try:
+            return CLASS_NAMES.index(normalize_class_name(class_name))
+        except ValueError as error:
+            raise ValueError(f"Unknown PCB class / Classe PCB inconnue: {class_name}") from error
+
     @staticmethod
     def is_kaggle() -> bool:
-        """Check if we're in Kaggle environment."""
-        return os.path.exists("/kaggle/input")
-    
+        return Path("/kaggle/input").is_dir()
+
     @staticmethod
     def get_data_path() -> Path:
-        """Returns dataset path."""
         if Config.is_kaggle():
-            for p in ("/kaggle/input/pcb-defects", "/kaggle/input/pcbdefects"):
-                if Path(p).exists():
-                    return Path(p)
-        return Path("data/pcb-defects")
-    
+            for name in ("pcb-defects", "pcbdefects"):
+                candidate = Path("/kaggle/input") / name
+                if candidate.is_dir():
+                    return candidate
+        return PROJECT_ROOT / "data" / "pcb-defects"
+
     @staticmethod
     def get_output_path() -> Path:
-        """Returns output directory."""
-        if Config.is_kaggle():
-            return Path("/kaggle/working")
-        output_dir = Path("output")
-        output_dir.mkdir(exist_ok=True)
-        return output_dir
-    
-    @staticmethod
-    def get_yolo_dataset_path() -> Path:
-        """Returns YOLO format dataset path."""
-        return Config.get_output_path() / "yolo_dataset"
-    
-    @classmethod
-    def create(
-        cls,
-        epochs: Optional[int] = None,
-        batch_size: Optional[int] = None,
-        img_size: Optional[int] = None,
-        conf_threshold: Optional[float] = None,
-    ) -> "Config":
-        """Creates custom configuration."""
-        config = cls()
-        if epochs is not None:
-            config.model.epochs = epochs
-        if batch_size is not None:
-            config.model.batch_size = batch_size
-        if img_size is not None:
-            config.model.img_size = img_size
-        if conf_threshold is not None:
-            config.inference.conf_threshold = conf_threshold
-        return config
-
-
-# Initialize class mapping on module load
-Config._init_class_map()
+        # EN: Reading configuration does not create files. FR: La lecture ne crée aucun fichier.
+        return Path("/kaggle/working") if Config.is_kaggle() else PROJECT_ROOT / "output"
